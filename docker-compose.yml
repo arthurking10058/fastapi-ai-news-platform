@@ -1,0 +1,59 @@
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: fastapi_first_mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: 123456
+      MYSQL_DATABASE: news_app
+      TZ: Asia/Shanghai
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  redis:
+    image: redis:7-alpine
+    container_name: fastapi_first_redis
+    ports:
+      - "6379:6379"
+
+  backend:
+    build:
+      context: .
+      dockerfile: toutiao_backend/Dockerfile
+    container_name: fastapi_first_backend
+    depends_on:
+      - mysql
+      - redis
+    environment:
+      DATABASE_URL: mysql+aiomysql://root:123456@mysql:3306/news_app?charset=utf8mb4
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_DB: 0
+      CACHE_RETRY_INTERVAL: 30
+      CORS_ORIGINS: http://localhost,http://127.0.0.1
+      DEBUG: "false"
+      AI_API_KEY: ${AI_API_KEY:-}
+      AI_MODEL: ${AI_MODEL:-qwen-max}
+      AI_API_ENDPOINT: ${AI_API_ENDPOINT:-https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions}
+      AI_TIMEOUT: 30
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build:
+      context: ./xwzx-news
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: http://localhost:8000
+    container_name: fastapi_first_frontend
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+
+volumes:
+  mysql_data:

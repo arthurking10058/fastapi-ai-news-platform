@@ -106,6 +106,28 @@ Frontend environment example:
 VITE_API_BASE_URL=http://127.0.0.1:8000
 ```
 
+## Docker
+
+Local and demo startup:
+
+```powershell
+docker compose up --build
+```
+
+Services:
+
+- Frontend: `http://localhost`
+- Backend: `http://localhost:8000`
+- MySQL: `127.0.0.1:3306`
+- Redis: `127.0.0.1:6379`
+
+The compose file starts:
+
+- MySQL 8.4
+- Redis
+- FastAPI backend
+- Vue frontend served by Nginx
+
 ## Running Tests
 
 Backend interface tests are located in:

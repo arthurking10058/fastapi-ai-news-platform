@@ -9,3 +9,4 @@ test_app.db
 xwzx-news/dist/
 xwzx-news/node_modules/
 记录文档/
+mysql_data/
