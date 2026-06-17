@@ -18,7 +18,6 @@ redis_client = redis.Redis(
     decode_responses=True,
     socket_connect_timeout=1,
     socket_timeout=1,
-    retry_on_timeout=False,
 )
 
 

@@ -125,8 +125,16 @@ The compose file starts:
 
 - MySQL 8.4
 - Redis
+- a one-shot demo seed service
 - FastAPI backend
 - Vue frontend served by Nginx
+
+Demo data includes:
+
+- several news categories
+- multiple news items for the home and detail pages
+- a demo account: `admin` / `123456`
+- a sample favorite and browsing history entry
 
 ## Running Tests
 
