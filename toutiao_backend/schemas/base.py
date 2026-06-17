@@ -3,11 +3,13 @@ from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
+
 class ORMBaseModel(BaseModel):
     model_config = ConfigDict(
         from_attributes=True,
         populate_by_name=True,
     )
+
 
 class NewsItemBase(BaseModel):
     id: int

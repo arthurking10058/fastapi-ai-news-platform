@@ -6,7 +6,7 @@
       @click-left="onClickLeft"
       fixed
     />
-    
+
     <div class="login-container">
       <div class="login-logo">
         <van-image
@@ -17,7 +17,7 @@
         />
         <h2>新闻资讯</h2>
       </div>
-      
+
       <van-form @submit="onSubmit" class="login-form">
         <van-cell-group inset>
           <van-field
@@ -36,13 +36,13 @@
             :rules="[{ required: true, message: '请填写密码' }]"
           />
         </van-cell-group>
-        
+
         <div class="submit-btn">
           <van-button round block type="primary" native-type="submit" size="large">
             登录
           </van-button>
         </div>
-        
+
         <div class="login-tips">
           <p>测试账号：admin</p>
           <p>测试密码：123456</p>
@@ -53,57 +53,56 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
-import { useRouter } from 'vue-router';
-import { showToast } from 'vant';
-import { useUserStore } from '../store/user';
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { showToast } from 'vant'
 
-const router = useRouter();
-const userStore = useUserStore();
+import { useUserStore } from '../store/user'
 
-const username = ref('');
-const password = ref('');
+const router = useRouter()
+const userStore = useUserStore()
 
-const onSubmit = async (values) => {
-  // 显示加载提示
+const username = ref('')
+const password = ref('')
+
+const onSubmit = async () => {
   showToast({
     type: 'loading',
     message: '登录中...',
     forbidClick: true,
-    duration: 0
-  });
-  
+    duration: 0,
+  })
+
   try {
-    // 调用API登录
     const result = await userStore.login({
       username: username.value,
-      password: password.value
-    });
-    
+      password: password.value,
+    })
+
     if (result.success) {
       showToast({
         type: 'success',
-        message: result.message
-      });
-      
-      router.push('/');
+        message: result.message,
+      })
+
+      router.push('/')
     } else {
       showToast({
         type: 'fail',
-        message: result.message
-      });
+        message: result.message,
+      })
     }
-  } catch (error) {
+  } catch {
     showToast({
       type: 'fail',
-      message: '登录失败，请稍后再试'
-    });
+      message: '登录失败，请稍后再试',
+    })
   }
-};
+}
 
 const onClickLeft = () => {
-  router.back();
-};
+  router.back()
+}
 </script>
 
 <style scoped>

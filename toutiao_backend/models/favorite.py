@@ -12,9 +12,9 @@ class Favorite(Base):
         Index("fk_favorite_news_idx", "news_id"),
     )
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True, comment="收藏ID")
-    user_id: Mapped[int] = mapped_column(ForeignKey("user.id"), nullable=False, comment="用户ID")
-    news_id: Mapped[int] = mapped_column(ForeignKey("news.id"), nullable=False, comment="新闻ID")
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True, comment="收藏 ID")
+    user_id: Mapped[int] = mapped_column(ForeignKey("user.id"), nullable=False, comment="用户 ID")
+    news_id: Mapped[int] = mapped_column(ForeignKey("news.id"), nullable=False, comment="新闻 ID")
 
     def __repr__(self) -> str:
         return (

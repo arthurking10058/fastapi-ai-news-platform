@@ -17,7 +17,6 @@ class Category(Base):
 
 class News(Base):
     __tablename__ = "news"
-    #创建索引
     __table_args__ = (
         Index("idx_news_category_id", "category_id"),
         Index("idx_news_publish_time", "publish_time"),

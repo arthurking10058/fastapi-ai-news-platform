@@ -6,7 +6,10 @@ from toutiao_backend.models.news import News
 
 
 async def is_news_favorite(
-        db: AsyncSession, user_id: int, news_id: int) -> bool:
+    db: AsyncSession,
+    user_id: int,
+    news_id: int,
+) -> bool:
     query = select(Favorite).where(Favorite.user_id == user_id, Favorite.news_id == news_id)
     result = await db.execute(query)
     return result.scalar_one_or_none() is not None
@@ -27,7 +30,10 @@ async def add_news_favorite(db: AsyncSession, user_id: int, news_id: int) -> Fav
 
 
 async def remove_news_favorite(
-        db: AsyncSession, user_id: int, news_id: int) -> bool:
+    db: AsyncSession,
+    user_id: int,
+    news_id: int,
+) -> bool:
     stmt = delete(Favorite).where(Favorite.user_id == user_id, Favorite.news_id == news_id)
     result = await db.execute(stmt)
     await db.commit()

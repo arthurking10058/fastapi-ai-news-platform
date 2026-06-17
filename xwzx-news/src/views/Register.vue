@@ -6,7 +6,7 @@
       @click-left="onClickLeft"
       fixed
     />
-    
+
     <div class="register-container">
       <div class="register-logo">
         <van-image
@@ -17,7 +17,7 @@
         />
         <h2>新闻资讯</h2>
       </div>
-      
+
       <van-form @submit="onSubmit" class="register-form">
         <van-cell-group inset>
           <van-field
@@ -47,13 +47,13 @@
             ]"
           />
         </van-cell-group>
-        
+
         <div class="submit-btn">
           <van-button round block type="primary" native-type="submit" size="large">
             注册
           </van-button>
         </div>
-        
+
         <div class="login-link">
           已有账号？<span @click="goToLogin">去登录</span>
         </div>
@@ -63,67 +63,65 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
-import { useRouter } from 'vue-router';
-import { showToast } from 'vant';
-import { useUserStore } from '../store/user';
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { showToast } from 'vant'
 
-const router = useRouter();
-const userStore = useUserStore();
+import { useUserStore } from '../store/user'
 
-const username = ref('');
-const password = ref('');
-const confirmPassword = ref('');
+const router = useRouter()
+const userStore = useUserStore()
 
-// 验证两次密码是否一致
+const username = ref('')
+const password = ref('')
+const confirmPassword = ref('')
+
 const validatePassword = () => {
-  return password.value === confirmPassword.value;
-};
+  return password.value === confirmPassword.value
+}
 
 const onSubmit = async () => {
-  // 显示加载提示
   showToast({
     type: 'loading',
     message: '注册中...',
     forbidClick: true,
-    duration: 0
-  });
-  
+    duration: 0,
+  })
+
   try {
-    // 调用API注册
     const result = await userStore.register({
       username: username.value,
-      password: password.value
-    });
-    
+      password: password.value,
+    })
+
     if (result.success) {
       showToast({
         type: 'success',
-        message: result.message
-      });
-      
-      router.push('/');
+        message: result.message,
+      })
+
+      router.push('/')
     } else {
       showToast({
         type: 'fail',
-        message: result.message
-      });
+        message: result.message,
+      })
     }
-  } catch (error) {
+  } catch {
     showToast({
       type: 'fail',
-      message: '注册失败，请稍后再试'
-    });
+      message: '注册失败，请稍后再试',
+    })
   }
-};
+}
 
 const onClickLeft = () => {
-  router.back();
-};
+  router.back()
+}
 
 const goToLogin = () => {
-  router.push('/login');
-};
+  router.push('/login')
+}
 </script>
 
 <style scoped>
