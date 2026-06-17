@@ -1,0 +1,26 @@
+[project]
+name = "fastapi-ai-news-platform"
+version = "0.1.0"
+description = "A FastAPI and Vue based AI news platform"
+requires-python = ">=3.13"
+dependencies = [
+    "aiosqlite>=0.21.0",
+    "fastapi>=0.116.1",
+    "aiomysql>=0.2.0",
+    "sqlalchemy[asyncio]>=2.0.41",
+    "uvicorn[standard]>=0.35.0",
+    "passlib[bcrypt]==1.7.4",
+    "bcrypt==3.2.2",
+    "redis>=8.0.0",
+]
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28.1",
+    "pytest>=8.4.1",
+    "pytest-asyncio>=1.0.0",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

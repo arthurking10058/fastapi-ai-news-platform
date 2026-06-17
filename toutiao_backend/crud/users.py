@@ -1,0 +1,114 @@
+import uuid
+from datetime import datetime, timedelta
+
+from fastapi import HTTPException
+from sqlalchemy import select, update
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from toutiao_backend.models.users import User, UserToken
+from toutiao_backend.schemas.users import (
+    UserChangePasswordRequest,
+    UserRequest,
+    UserUpdateRequest,
+)
+from toutiao_backend.utils import security
+from toutiao_backend.utils.security import get_hash_password, verify_password
+
+
+async def get_user_by_username(db: AsyncSession, username: str) -> User | None:
+    query = select(User).where(User.username == username)
+    result = await db.execute(query)
+    return result.scalar_one_or_none()
+
+
+async def create_user(db: AsyncSession, user_data: UserRequest) -> User:
+    user = User(
+        username=user_data.username,
+        password=get_hash_password(user_data.password),
+    )
+    db.add(user)
+    await db.commit()
+    await db.refresh(user)
+    return user
+
+
+async def create_token(db: AsyncSession, user_id: int) -> str:
+    token = str(uuid.uuid4())
+    expires_at = datetime.now() + timedelta(days=7)
+
+    query = select(UserToken).where(UserToken.user_id == user_id)
+    result = await db.execute(query)
+    user_token = result.scalar_one_or_none()
+
+    if user_token:
+        user_token.token = token
+        user_token.expires_at = expires_at
+    else:
+        user_token = UserToken(user_id=user_id, token=token, expires_at=expires_at)
+        db.add(user_token)
+
+    await db.commit()
+    return token
+
+
+async def authenticate_user(
+    db: AsyncSession,
+    username: str,
+    password: str,
+) -> User | None:
+    user = await get_user_by_username(db, username)
+    if not user:
+        return None
+    if not verify_password(password, user.password):
+        return None
+    return user
+
+
+async def get_user_by_token(db: AsyncSession, token: str) -> User | None:
+    query = select(UserToken).where(UserToken.token == token)
+    result = await db.execute(query)
+    db_token = result.scalar_one_or_none()
+
+    if not db_token or db_token.expires_at < datetime.now():
+        return None
+
+    query = select(User).where(User.id == db_token.user_id)
+    result = await db.execute(query)
+    return result.scalar_one_or_none()
+
+
+async def update_user(
+    db: AsyncSession,
+    username: str,
+    user_data: UserUpdateRequest,
+) -> User:
+    query = (
+        update(User)
+        .where(User.username == username)
+        .values(**user_data.model_dump(exclude_unset=True, exclude_none=True))
+    )
+    result = await db.execute(query)
+    await db.commit()
+
+    if result.rowcount == 0:
+        raise HTTPException(status_code=404, detail="用户不存在")
+
+    updated_user = await get_user_by_username(db, username)
+    if updated_user is None:
+        raise HTTPException(status_code=404, detail="用户不存在")
+    return updated_user
+
+
+async def change_password(
+    db: AsyncSession,
+    user: User,
+    password_data: UserChangePasswordRequest,
+) -> bool:
+    if not security.verify_password(password_data.old_password, user.password):
+        return False
+
+    user.password = security.get_hash_password(password_data.new_password)
+    db.add(user)
+    await db.commit()
+    await db.refresh(user)
+    return True

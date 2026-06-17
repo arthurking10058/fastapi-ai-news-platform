@@ -1,0 +1,11 @@
+.env
+*.env
+__pycache__/
+*.pyc
+.uv-cache/
+.venv/
+.pytest_cache/
+test_app.db
+xwzx-news/dist/
+xwzx-news/node_modules/
+记录文档/
