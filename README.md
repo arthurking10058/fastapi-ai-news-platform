@@ -136,6 +136,8 @@ Demo data includes:
 - a demo account: `admin` / `123456`
 - a sample favorite and browsing history entry
 
+The backend waits for MySQL during demo data seeding, then starts the app with the seeded content available for the frontend.
+
 ## Running Tests
 
 Backend interface tests are located in:

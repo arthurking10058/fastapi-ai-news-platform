@@ -1,0 +1,10 @@
+.git
+.venv
+.uv-cache
+__pycache__
+*.pyc
+tests
+test_app.db
+xwzx-news/node_modules
+xwzx-news/dist
+记录文档
