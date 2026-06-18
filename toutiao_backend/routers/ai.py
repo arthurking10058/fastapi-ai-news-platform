@@ -5,7 +5,7 @@ from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 from fastapi import APIRouter, Depends
-from sqlalchemy import desc, select
+from sqlalchemy import desc, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from toutiao_backend.config.ai_conf import get_ai_chat_settings
@@ -17,6 +17,7 @@ from toutiao_backend.utils.response import success_response
 router = APIRouter(prefix="/api/ai", tags=["ai"])
 
 HOT_NEWS_LIMIT = 5
+GENERAL_NEWS_LIMIT = 5
 
 
 @router.post("/chat")
@@ -29,7 +30,21 @@ async def chat_with_news_context(
     if is_2024_headline_hot_news_question(payload.question):
         hot_news = await get_2024_headline_hot_news(db)
         news_items = [serialize_hot_news(item) for item in hot_news]
-        answer, source = await answer_hot_news_question(payload, news_items, settings)
+        answer, source = await answer_news_question(
+            payload,
+            news_items,
+            settings,
+            build_hot_news_answer(news_items),
+        )
+    elif should_query_database_first(payload.question):
+        matched_news = await get_relevant_news_from_db(db, payload.question)
+        news_items = [serialize_hot_news(item) for item in matched_news]
+        answer, source = await answer_news_question(
+            payload,
+            news_items,
+            settings,
+            build_news_lookup_answer(payload.question, news_items),
+        )
     else:
         news_items = []
         answer, source = await answer_general_question(payload, settings)
@@ -47,7 +62,10 @@ async def chat_with_news_context(
 def is_2024_headline_hot_news_question(question: str) -> bool:
     text = question.lower().replace(" ", "")
     has_2024 = any(keyword in text for keyword in ("2024", "24年", "二零二四", "二〇二四"))
-    has_headline = any(keyword in text for keyword in ("头条", "category_id=1", "分类1"))
+    has_headline = any(
+        keyword in text
+        for keyword in ("头条", "headline", "首页", "category_id=1", "分类1")
+    )
     has_hot_rank = any(
         keyword in text
         for keyword in (
@@ -55,6 +73,9 @@ def is_2024_headline_hot_news_question(question: str) -> bool:
             "浏览量最高",
             "阅读最多",
             "阅读量最高",
+            "最火",
+            "最热门",
+            "最热",
             "最多",
             "最高",
             "排行",
@@ -65,12 +86,40 @@ def is_2024_headline_hot_news_question(question: str) -> bool:
     return has_2024 and has_headline and has_hot_rank
 
 
-async def answer_hot_news_question(
+def should_query_database_first(question: str) -> bool:
+    text = question.lower().replace(" ", "")
+    news_keywords = (
+        "新闻",
+        "头条",
+        "热点",
+        "热搜",
+        "排行",
+        "排名",
+        "最火",
+        "最热",
+        "热门",
+        "科技",
+        "体育",
+        "社会",
+        "运动",
+        "明星",
+        "娱乐",
+        "游戏",
+        "奥运",
+        "ai",
+        "人工智能",
+        "苹果",
+        "openai",
+    )
+    return any(keyword in text for keyword in news_keywords)
+
+
+async def answer_news_question(
     payload: AIChatRequest,
     news_items: list[AIHotNewsItem],
     settings,
+    fallback_answer: str,
 ) -> tuple[str, str]:
-    fallback_answer = build_hot_news_answer(news_items)
     if not settings.api_key:
         return fallback_answer, "database"
 
@@ -113,6 +162,49 @@ async def get_2024_headline_hot_news(db: AsyncSession) -> list[News]:
     return list(result.scalars().all())
 
 
+async def get_relevant_news_from_db(db: AsyncSession, question: str) -> list[News]:
+    text = question.lower()
+    stmt = select(News)
+
+    if any(keyword in text for keyword in ("2024", "24年", "二零二四", "二〇二四")):
+        stmt = stmt.where(
+            News.publish_time >= datetime(2024, 1, 1),
+            News.publish_time < datetime(2025, 1, 1),
+        )
+
+    if any(keyword in text for keyword in ("头条", "headline", "首页")):
+        stmt = stmt.where(News.category_id == 1)
+    elif "社会" in text:
+        stmt = stmt.where(News.category_id == 2)
+    elif any(keyword in text for keyword in ("科技", "ai", "人工智能", "游戏", "苹果", "openai")):
+        stmt = stmt.where(News.category_id == 3)
+    elif any(keyword in text for keyword in ("体育", "运动", "奥运", "足球", "网球", "游泳")):
+        stmt = stmt.where(News.category_id == 4)
+
+    keyword_conditions = []
+    for keyword in ("明星", "娱乐", "运动", "体育", "科技", "游戏", "ai", "人工智能", "奥运", "苹果", "openai"):
+        if keyword in text:
+            keyword_conditions.extend(
+                [
+                    News.title.contains(keyword),
+                    News.description.contains(keyword),
+                    News.content.contains(keyword),
+                ]
+            )
+
+    if keyword_conditions:
+        stmt = stmt.where(or_(*keyword_conditions))
+
+    if any(keyword in text for keyword in ("最火", "最热", "最热门", "热门", "排行", "排名", "最多", "最高")):
+        stmt = stmt.order_by(desc(News.views), desc(News.publish_time))
+    else:
+        stmt = stmt.order_by(desc(News.publish_time), desc(News.views))
+
+    stmt = stmt.limit(GENERAL_NEWS_LIMIT)
+    result = await db.execute(stmt)
+    return list(result.scalars().all())
+
+
 def serialize_hot_news(item: News) -> AIHotNewsItem:
     return AIHotNewsItem(
         id=item.id,
@@ -138,13 +230,27 @@ def build_hot_news_answer(news_items: list[AIHotNewsItem]) -> str:
     return "\n".join(lines)
 
 
+def build_news_lookup_answer(question: str, news_items: list[AIHotNewsItem]) -> str:
+    if not news_items:
+        return f"我查询了当前数据库，但没有找到与“{question}”相关的新闻记录。"
+
+    lines = [f"根据当前数据库，和“{question}”最相关的新闻如下："]
+    for index, item in enumerate(news_items, start=1):
+        lines.append(
+            f"{index}. {item.title}，浏览量 {item.views}，发布时间 {item.publish_time}"
+        )
+        if item.description:
+            lines.append(f"   简介：{item.description}")
+    return "\n".join(lines)
+
+
 def build_news_system_messages(news_items: list[AIHotNewsItem]) -> list[dict[str, str]]:
     return [
         {
             "role": "system",
             "content": (
-                "你是新闻项目里的 AI 助手。回答涉及新闻排行、浏览量、2024 年头条新闻时，"
-                "必须只依赖后端提供的数据库查询结果，不能编造不存在的数据。"
+                "你是新闻项目里的 AI 助手。只要后端已经提供数据库查询结果，"
+                "你就必须优先依据这些结果回答，不能编造不存在的新闻。"
             ),
         },
         {

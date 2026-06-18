@@ -3,6 +3,8 @@ import { defineStore } from 'pinia'
 import { useUserStore } from '../user'
 import request, { getErrorMessage } from '../../utils/request'
 
+const FAVORITES_STORAGE_PREFIX = 'news_favorites'
+
 export const useFavoriteStore = defineStore('favorite', {
   state: () => ({
     favorites: [],
@@ -15,6 +17,12 @@ export const useFavoriteStore = defineStore('favorite', {
   },
 
   actions: {
+    getStorageKey() {
+      const userStore = useUserStore()
+      const userId = userStore.userInfo?.id || 'guest'
+      return `${FAVORITES_STORAGE_PREFIX}:${userId}`
+    },
+
     async checkFavoriteStatusApi(newsId) {
       const userStore = useUserStore()
       if (!userStore.getLoginStatus) {
@@ -151,6 +159,10 @@ export const useFavoriteStore = defineStore('favorite', {
       this.saveFavorites()
     },
 
+    resetFavorites() {
+      this.favorites = []
+    },
+
     async clearFavoritesApi() {
       const userStore = useUserStore()
       if (!userStore.getLoginStatus) {
@@ -179,13 +191,21 @@ export const useFavoriteStore = defineStore('favorite', {
     },
 
     saveFavorites() {
-      localStorage.setItem('news_favorites', JSON.stringify(this.favorites))
+      localStorage.setItem(this.getStorageKey(), JSON.stringify(this.favorites))
     },
 
     loadFavorites() {
-      const savedFavorites = localStorage.getItem('news_favorites')
-      if (savedFavorites) {
+      const savedFavorites = localStorage.getItem(this.getStorageKey())
+      if (!savedFavorites) {
+        this.favorites = []
+        return
+      }
+
+      try {
         this.favorites = JSON.parse(savedFavorites)
+      } catch (error) {
+        console.error('读取本地收藏失败:', error)
+        this.favorites = []
       }
     },
 

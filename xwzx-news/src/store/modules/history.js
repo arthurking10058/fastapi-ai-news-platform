@@ -3,7 +3,7 @@ import { defineStore } from 'pinia'
 import { useUserStore } from '../user'
 import request, { getErrorMessage } from '../../utils/request'
 
-const STORAGE_KEY = 'news_history'
+const HISTORY_STORAGE_PREFIX = 'news_history'
 const MAX_HISTORY_COUNT = 50
 
 export const useHistoryStore = defineStore('history', {
@@ -17,6 +17,12 @@ export const useHistoryStore = defineStore('history', {
   },
 
   actions: {
+    getStorageKey() {
+      const userStore = useUserStore()
+      const userId = userStore.userInfo?.id || 'guest'
+      return `${HISTORY_STORAGE_PREFIX}:${userId}`
+    },
+
     async addHistoryApi(newsId) {
       const userStore = useUserStore()
 
@@ -90,6 +96,10 @@ export const useHistoryStore = defineStore('history', {
       this.saveHistory()
     },
 
+    resetHistory() {
+      this.history = []
+    },
+
     async clearHistoryApi() {
       const userStore = useUserStore()
 
@@ -150,11 +160,11 @@ export const useHistoryStore = defineStore('history', {
     },
 
     saveHistory() {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(this.history))
+      localStorage.setItem(this.getStorageKey(), JSON.stringify(this.history))
     },
 
     loadHistory() {
-      const savedHistory = localStorage.getItem(STORAGE_KEY)
+      const savedHistory = localStorage.getItem(this.getStorageKey())
       if (!savedHistory) {
         this.history = []
         return

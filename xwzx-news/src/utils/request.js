@@ -4,7 +4,7 @@ import { apiConfig } from '../config/api'
 
 const request = axios.create({
   baseURL: apiConfig.baseURL,
-  timeout: 10000,
+  timeout: 30000,
 })
 
 function readStoredToken() {

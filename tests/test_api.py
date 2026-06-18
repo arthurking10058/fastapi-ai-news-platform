@@ -101,3 +101,33 @@ async def test_ai_fallback_response(client: AsyncClient):
     assert data["code"] == 200
     assert data["data"]["source"] in {"database", "fallback", "ai"}
     assert data["data"]["answer"]
+
+
+async def test_ai_natural_hot_news_question_hits_database_branch(client: AsyncClient):
+    response = await client.post(
+        "/api/ai/chat",
+        json={
+            "question": "24年最火的头条新闻是什么？",
+            "messages": [],
+        },
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["code"] == 200
+    assert data["data"]["source"] in {"database", "fallback", "ai"}
+    assert "根据当前数据库查询" in data["data"]["answer"]
+
+
+async def test_ai_sports_news_question_queries_database(client: AsyncClient):
+    response = await client.post(
+        "/api/ai/chat",
+        json={
+            "question": "给我一篇关于运动的新闻",
+            "messages": [],
+        },
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["code"] == 200
+    assert data["data"]["source"] in {"database", "fallback", "ai"}
+    assert "根据当前数据库" in data["data"]["answer"] or "没有找到" in data["data"]["answer"]

@@ -1,5 +1,7 @@
 import { defineStore } from 'pinia'
 
+import { useFavoriteStore } from './modules/favorite'
+import { useHistoryStore } from './modules/history'
 import request, { getErrorMessage } from '../utils/request'
 
 export const useUserStore = defineStore('user', {
@@ -18,6 +20,15 @@ export const useUserStore = defineStore('user', {
   },
 
   actions: {
+    syncUserScopedData() {
+      const favoriteStore = useFavoriteStore()
+      const historyStore = useHistoryStore()
+      favoriteStore.resetFavorites()
+      historyStore.resetHistory()
+      favoriteStore.loadFavorites()
+      historyStore.loadHistory()
+    },
+
     async login(userData) {
       try {
         const response = await request.post('/api/user/login', {
@@ -32,6 +43,7 @@ export const useUserStore = defineStore('user', {
           this.userInfo = userInfo
           this.token = token
           this.isLogin = true
+          this.syncUserScopedData()
 
           return { success: true, message: '登录成功' }
         }
@@ -60,6 +72,7 @@ export const useUserStore = defineStore('user', {
           this.userInfo = userInfo
           this.token = token
           this.isLogin = true
+          this.syncUserScopedData()
 
           return { success: true, message: '注册成功' }
         }
@@ -75,9 +88,15 @@ export const useUserStore = defineStore('user', {
     },
 
     logout() {
+      const favoriteStore = useFavoriteStore()
+      const historyStore = useHistoryStore()
+      favoriteStore.resetFavorites()
+      historyStore.resetHistory()
       this.userInfo = null
       this.token = ''
       this.isLogin = false
+      favoriteStore.loadFavorites()
+      historyStore.loadHistory()
     },
 
     async getUserInfoDetail() {
