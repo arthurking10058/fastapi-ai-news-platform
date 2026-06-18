@@ -4,6 +4,7 @@ services:
     container_name: fastapi_first_mysql
     environment:
       MYSQL_ROOT_PASSWORD: 123456
+      MYSQL_ROOT_HOST: "%"
       MYSQL_DATABASE: news_app
       TZ: Asia/Shanghai
     command:
@@ -13,20 +14,38 @@ services:
       - "3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p123456", "--silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 24
+      start_period: 20s
 
   redis:
     image: redis:7-alpine
     container_name: fastapi_first_redis
     ports:
       - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
 
   seed:
     build:
       context: .
       dockerfile: toutiao_backend/Dockerfile
+      args:
+        PIP_INDEX_URL: ${PIP_INDEX_URL:-https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple}
+        UV_DEFAULT_INDEX: ${UV_DEFAULT_INDEX:-https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple}
     container_name: fastapi_first_seed
     depends_on:
-      - mysql
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     entrypoint: ["/app/.venv/bin/python", "-m", "toutiao_backend.scripts.seed_demo_data"]
     environment:
       DATABASE_URL: mysql+aiomysql://root:123456@mysql:3306/news_app?charset=utf8mb4
@@ -46,11 +65,17 @@ services:
     build:
       context: .
       dockerfile: toutiao_backend/Dockerfile
+      args:
+        PIP_INDEX_URL: ${PIP_INDEX_URL:-https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple}
+        UV_DEFAULT_INDEX: ${UV_DEFAULT_INDEX:-https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple}
     container_name: fastapi_first_backend
     depends_on:
-      - mysql
-      - redis
-      - seed
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      seed:
+        condition: service_completed_successfully
     environment:
       DATABASE_URL: mysql+aiomysql://root:123456@mysql:3306/news_app?charset=utf8mb4
       REDIS_HOST: redis
@@ -72,6 +97,7 @@ services:
       dockerfile: Dockerfile
       args:
         VITE_API_BASE_URL: http://localhost:8000
+        NPM_REGISTRY: ${NPM_REGISTRY:-https://registry.npmmirror.com}
     container_name: fastapi_first_frontend
     depends_on:
       - backend
