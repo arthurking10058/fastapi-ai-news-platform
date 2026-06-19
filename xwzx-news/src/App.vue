@@ -1,20 +1,24 @@
 <template>
   <div class="app">
-    <router-view v-slot="{ Component }">
-      <template v-if="$route.meta.keepAlive">
-        <keep-alive>
-          <component :is="Component" />
-        </keep-alive>
-      </template>
-      <template v-else>
-        <component :is="Component" />
-      </template>
+    <router-view v-slot="{ Component, route }">
+      <keep-alive :include="KEEP_ALIVE_ROUTE_NAMES">
+        <component
+          v-if="route.meta.keepAlive"
+          :is="Component"
+          :key="route.name"
+        />
+      </keep-alive>
+      <component
+        v-if="!route.meta.keepAlive"
+        :is="Component"
+        :key="route.fullPath"
+      />
     </router-view>
   </div>
 </template>
 
 <script setup>
-// App.vue 作为根组件
+const KEEP_ALIVE_ROUTE_NAMES = ['Home', 'Category', 'AIChat', 'My']
 </script>
 
 <style>

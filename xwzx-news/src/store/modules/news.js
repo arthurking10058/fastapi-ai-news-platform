@@ -23,6 +23,11 @@ export const useNewsStore = defineStore('news', {
     finished: false,
     categoriesLoading: false,
     detailLoading: false,
+    listRequestToken: 0,
+    detailRequestToken: 0,
+    newsListCache: {},
+    newsDetailCache: {},
+    initialLoading: false,
   }),
 
   actions: {
@@ -56,8 +61,10 @@ export const useNewsStore = defineStore('news', {
     changeCategory(categoryId) {
       if (this.currentCategory !== categoryId) {
         this.currentCategory = categoryId
-        this.newsList = []
-        this.finished = false
+        const cached = this.newsListCache[categoryId]
+        this.newsList = cached?.list || []
+        this.finished = cached?.finished || false
+        this.loading = false
         this.getNewsList(true)
       }
     },
@@ -67,13 +74,22 @@ export const useNewsStore = defineStore('news', {
         return
       }
 
+      const hasCachedList = !!this.newsListCache[this.currentCategory]?.list?.length
       if (isRefresh) {
         this.refreshing = true
-        this.newsList = []
-        this.finished = false
+        const cached = this.newsListCache[this.currentCategory]
+        if (cached?.list?.length) {
+          this.newsList = cached.list
+          this.finished = cached.finished
+        } else {
+          this.newsList = []
+          this.finished = false
+        }
       }
 
+      this.initialLoading = !hasCachedList && this.newsList.length === 0
       this.loading = true
+      const requestToken = ++this.listRequestToken
 
       try {
         const params = {
@@ -84,41 +100,94 @@ export const useNewsStore = defineStore('news', {
 
         const response = await request.get('/api/news/list', { params })
 
+        if (requestToken !== this.listRequestToken) {
+          return
+        }
+
         if (response.data?.code === 200) {
           const newsData = response.data.data.list || []
           this.newsList = isRefresh ? newsData : [...this.newsList, ...newsData]
           this.finished = newsData.length < params.pageSize
+          this.newsListCache[this.currentCategory] = {
+            list: [...this.newsList],
+            finished: this.finished,
+          }
         }
       } catch (error) {
+        if (requestToken !== this.listRequestToken) {
+          return
+        }
         console.error('获取新闻列表失败:', error)
       } finally {
-        this.loading = false
-        this.refreshing = false
+        if (requestToken === this.listRequestToken) {
+          this.loading = false
+          this.refreshing = false
+          this.initialLoading = false
+        }
+      }
+    },
+
+    async prefetchFirstPage(categoryId) {
+      if (!categoryId || this.newsListCache[categoryId]?.list?.length) {
+        return
+      }
+
+      try {
+        const response = await request.get('/api/news/list', {
+          params: {
+            categoryId,
+            page: 1,
+            pageSize: 10,
+          },
+        })
+
+        if (response.data?.code === 200) {
+          const newsData = response.data.data.list || []
+          this.newsListCache[categoryId] = {
+            list: newsData,
+            finished: newsData.length < 10,
+          }
+        }
+      } catch (error) {
+        console.error('预取新闻列表失败:', error)
       }
     },
 
     async getNewsDetail(id) {
       if (this.detailLoading) {
-        return
+        this.detailRequestToken += 1
       }
 
+      const requestToken = ++this.detailRequestToken
       this.detailLoading = true
-      this.newsDetail = {}
+      this.newsDetail = this.newsDetailCache[id] || {}
 
       try {
         const response = await request.get('/api/news/detail', {
           params: { id },
         })
 
+        if (requestToken !== this.detailRequestToken) {
+          return null
+        }
+
         if (response.data?.code === 200) {
           this.newsDetail = response.data.data
+          this.newsDetailCache[id] = response.data.data
+          return this.newsDetail
         }
       } catch (error) {
-        this.newsDetail = {}
+        if (requestToken === this.detailRequestToken) {
+          this.newsDetail = {}
+        }
         console.error('获取新闻详情失败:', error)
       } finally {
-        this.detailLoading = false
+        if (requestToken === this.detailRequestToken) {
+          this.detailLoading = false
+        }
       }
+
+      return null
     },
 
     getCategoryName(categoryId) {

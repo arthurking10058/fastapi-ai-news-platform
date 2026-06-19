@@ -29,6 +29,31 @@ export const useUserStore = defineStore('user', {
       historyStore.loadHistory()
     },
 
+    async initializePersistedSession() {
+      if (!this.token || !this.isLogin) {
+        return
+      }
+
+      const favoriteStore = useFavoriteStore()
+      const historyStore = useHistoryStore()
+      this.syncUserScopedData()
+
+      const result = await this.getUserInfoDetail()
+      if (!result.success) {
+        this.logout()
+        return
+      }
+
+      try {
+        await Promise.allSettled([
+          favoriteStore.getFavoriteListApi(),
+          historyStore.getHistoryListApi(),
+        ])
+      } catch (error) {
+        console.error('恢复持久化会话数据失败:', error)
+      }
+    },
+
     async login(userData) {
       try {
         const response = await request.post('/api/user/login', {

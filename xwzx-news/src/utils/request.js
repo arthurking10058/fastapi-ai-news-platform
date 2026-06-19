@@ -1,6 +1,8 @@
 import axios from 'axios'
 
 import { apiConfig } from '../config/api'
+import pinia from '../store'
+import { useUserStore } from '../store/user'
 
 const request = axios.create({
   baseURL: apiConfig.baseURL,
@@ -8,6 +10,15 @@ const request = axios.create({
 })
 
 function readStoredToken() {
+  try {
+    const userStore = useUserStore(pinia)
+    if (userStore?.token) {
+      return userStore.token
+    }
+  } catch {
+    // fall back to persisted storage when Pinia is not ready yet
+  }
+
   const rawUserStore = localStorage.getItem('user-store')
   if (!rawUserStore) {
     return ''

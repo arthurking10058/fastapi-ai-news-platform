@@ -18,6 +18,7 @@ class AIHotNewsItem(BaseModel):
     title: str
     description: str | None = None
     author: str | None = None
+    image: str | None = None
     views: int
     publish_time: str = Field(alias="publishTime")
 

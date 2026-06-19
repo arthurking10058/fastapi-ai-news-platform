@@ -19,8 +19,13 @@
         <van-cell :border="false" @click="goToNewsDetail(item.id)">
           <template #title>
             <div class="news-item">
-              <div class="news-image" v-if="item.image">
-                <img :src="item.image" :alt="item.title">
+              <div class="news-image">
+                <img
+                  :src="normalizeImageUrl(item.image, item.categoryId)"
+                  :alt="item.title"
+                  :data-category-id="item.categoryId"
+                  @error="applyImageFallback"
+                >
               </div>
               <div class="news-info">
                 <div class="news-title">{{ item.title }}</div>
@@ -53,6 +58,7 @@ import { useRouter } from 'vue-router'
 import { showDialog } from 'vant'
 import { useHistoryStore } from '../store/modules/history'
 import { formatTime } from '../utils/formatTime'
+import { applyImageFallback, normalizeImageUrl } from '../utils/imageFallback'
 
 const router = useRouter()
 const historyStore = useHistoryStore()

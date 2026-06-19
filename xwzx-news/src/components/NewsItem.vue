@@ -9,17 +9,24 @@
         <span>{{ news.views }} 阅读</span>
       </div>
     </div>
-    <div class="news-image" v-if="news.image">
-      <img :src="news.image" :alt="news.title">
+    <div class="news-image">
+      <img
+        :src="imageSrc"
+        :alt="news.title"
+        :data-category-id="news.categoryId"
+        loading="lazy"
+        @error="applyImageFallback"
+      >
     </div>
   </div>
 </template>
 
 <script setup>
-import { defineProps } from 'vue'
+import { computed, defineProps } from 'vue'
 import { useRouter } from 'vue-router'
 import { useHistoryStore } from '../store/modules/history'
 import { formatTime } from '../utils/formatTime'
+import { applyImageFallback, normalizeImageUrl } from '../utils/imageFallback'
 
 const props = defineProps({
   news: {
@@ -30,6 +37,7 @@ const props = defineProps({
 
 const router = useRouter()
 const historyStore = useHistoryStore()
+const imageSrc = computed(() => normalizeImageUrl(props.news.image, props.news.categoryId))
 
 const goToDetail = () => {
   historyStore.addHistory(props.news)

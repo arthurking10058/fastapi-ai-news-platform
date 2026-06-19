@@ -15,8 +15,13 @@
         <van-cell :border="false" @click="goToNewsDetail(item.id)">
           <template #title>
             <div class="news-item">
-              <div class="news-image" v-if="item.image">
-                <img :src="item.image" :alt="item.title">
+              <div class="news-image">
+                <img
+                  :src="normalizeImageUrl(item.image, item.categoryId)"
+                  :alt="item.title"
+                  :data-category-id="item.categoryId"
+                  @error="applyImageFallback"
+                >
               </div>
               <div class="news-info">
                 <div class="news-title">{{ item.title }}</div>
@@ -46,9 +51,11 @@
 <script setup>
 import { onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { showDialog } from 'vant'
+import { showDialog, showToast } from 'vant'
 import { useFavoriteStore } from '../store/modules/favorite'
 import { formatTime } from '../utils/formatTime'
+import { applyImageFallback, normalizeImageUrl } from '../utils/imageFallback'
+import { normalizeMessage } from '../utils/message'
 
 const router = useRouter()
 const favoriteStore = useFavoriteStore()
@@ -65,6 +72,8 @@ const removeFavorite = async (id) => {
   const result = await favoriteStore.removeFavoriteApi(id)
   if (result.success) {
     favoriteStore.removeFavorite(id)
+  } else {
+    showToast(normalizeMessage(result.message, '删除收藏失败'))
   }
 }
 
@@ -89,7 +98,7 @@ const onClickClear = async () => {
     if (action === 'confirm') {
       const result = await favoriteStore.clearFavoritesApi()
       if (!result || !result.success) {
-        console.log('清空收藏列表失败')
+        showToast(normalizeMessage(result?.message, '清空收藏列表失败'))
       }
     }
   })

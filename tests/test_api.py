@@ -130,4 +130,71 @@ async def test_ai_sports_news_question_queries_database(client: AsyncClient):
     data = response.json()
     assert data["code"] == 200
     assert data["data"]["source"] in {"database", "fallback", "ai"}
-    assert "根据当前数据库" in data["data"]["answer"] or "没有找到" in data["data"]["answer"]
+    assert data["data"]["news"]
+    assert any(item["title"] == "郑钦文夺得巴黎奥运会网球女单金牌" for item in data["data"]["news"])
+    assert "根据当前数据库" in data["data"]["answer"]
+
+
+async def test_ai_unknown_topic_returns_database_message_without_model(client: AsyncClient):
+    response = await client.post(
+        "/api/ai/chat",
+        json={
+            "question": "给我一篇关于天文占卜的新闻",
+            "messages": [],
+        },
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["code"] == 200
+    assert data["data"]["source"] == "database"
+    assert data["data"]["news"] == []
+    assert "没有找到与" in data["data"]["answer"]
+
+
+async def test_ai_finance_news_question_queries_database(client: AsyncClient):
+    response = await client.post(
+        "/api/ai/chat",
+        json={
+            "question": "给我一篇关于财经的新闻",
+            "messages": [],
+        },
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["code"] == 200
+    assert data["data"]["source"] in {"database", "fallback", "ai"}
+    assert data["data"]["news"]
+    assert any(item["title"] == "多家银行下调存款利率引发居民理财配置讨论" for item in data["data"]["news"])
+    assert "根据当前数据库" in data["data"]["answer"]
+
+
+async def test_ai_fiscal_news_question_queries_finance_database_branch(client: AsyncClient):
+    response = await client.post(
+        "/api/ai/chat",
+        json={
+            "question": "给我一条财政新闻",
+            "messages": [],
+        },
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["code"] == 200
+    assert data["data"]["source"] in {"database", "fallback", "ai"}
+    assert data["data"]["news"]
+    assert any(item["title"] == "多家银行下调存款利率引发居民理财配置讨论" for item in data["data"]["news"])
+
+
+async def test_ai_2024_hottest_sports_news_queries_database(client: AsyncClient):
+    response = await client.post(
+        "/api/ai/chat",
+        json={
+            "question": "24年热度最高的体育新闻是什么",
+            "messages": [],
+        },
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["code"] == 200
+    assert data["data"]["source"] in {"database", "fallback", "ai"}
+    assert data["data"]["news"]
+    assert any(item["title"] == "郑钦文夺得巴黎奥运会网球女单金牌" for item in data["data"]["news"])

@@ -1,8 +1,9 @@
 import asyncio
+import argparse
 import logging
 from datetime import datetime
 
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 
 from toutiao_backend.config.db_conf import AsyncSessionLocal, create_tables
 from toutiao_backend.models.favorite import Favorite
@@ -19,6 +20,7 @@ DEMO_CATEGORIES = [
     {"id": 2, "name": "社会", "sort_order": 2},
     {"id": 3, "name": "科技", "sort_order": 3},
     {"id": 4, "name": "体育", "sort_order": 4},
+    {"id": 5, "name": "财经", "sort_order": 5},
 ]
 
 DEMO_NEWS = [
@@ -32,9 +34,9 @@ DEMO_NEWS = [
             "也是全球首次实现月背采样返回。任务完成后，月球背面地质演化、"
             "撞击历史和月壤成分差异等研究都获得了更直接的样本支持。"
         ),
-        "image": "https://example.com/chang-e-6.jpg",
+        "image": "/demo-images/headline.svg",
         "author": "综合公开资料整理",
-        "category_id": 1,
+        "category_name": "头条",
         "views": 9800,
         "publish_time": datetime(2024, 6, 25, 14, 0, 0),
     },
@@ -48,9 +50,9 @@ DEMO_NEWS = [
             "这枚金牌也让郑钦文成为亚洲首位获得奥运网球单打金牌的运动员，"
             "在国内体育圈和社交媒体上引发了持续热议。"
         ),
-        "image": "https://example.com/zheng-qinwen.jpg",
+        "image": "/demo-images/sports.svg",
         "author": "综合公开资料整理",
-        "category_id": 4,
+        "category_name": "体育",
         "views": 9300,
         "publish_time": datetime(2024, 8, 3, 21, 30, 0),
     },
@@ -64,9 +66,9 @@ DEMO_NEWS = [
             "国产游戏事件之一。围绕中国神话题材、商业表现和全球传播影响力的讨论，"
             "也让它长期占据科技与游戏相关热榜。"
         ),
-        "image": "https://example.com/black-myth-wukong.jpg",
+        "image": "/demo-images/technology.svg",
         "author": "综合公开资料整理",
-        "category_id": 3,
+        "category_name": "科技",
         "views": 9600,
         "publish_time": datetime(2024, 8, 20, 10, 0, 0),
     },
@@ -80,9 +82,9 @@ DEMO_NEWS = [
             "迅速引发全球科技行业对生成式视频、内容创作与AI安全治理的广泛讨论。"
             "Sora 的公开亮相，也成为 2024 年人工智能领域最具代表性的热点事件之一。"
         ),
-        "image": "https://example.com/openai-sora.jpg",
+        "image": "/demo-images/technology.svg",
         "author": "综合公开资料整理",
-        "category_id": 3,
+        "category_name": "科技",
         "views": 8900,
         "publish_time": datetime(2024, 2, 15, 9, 0, 0),
     },
@@ -96,9 +98,9 @@ DEMO_NEWS = [
             "混合现实应用场景和硬件价格门槛的持续讨论。上市初期，Vision Pro 成为"
             "全球科技媒体和开发者社区关注度极高的产品之一。"
         ),
-        "image": "https://example.com/apple-vision-pro.jpg",
+        "image": "/demo-images/technology.svg",
         "author": "综合公开资料整理",
-        "category_id": 3,
+        "category_name": "科技",
         "views": 8400,
         "publish_time": datetime(2024, 2, 2, 10, 0, 0),
     },
@@ -111,9 +113,9 @@ DEMO_NEWS = [
             "这一成绩不仅刷新了项目纪录，也让中国游泳在国际舞台上再度成为焦点。"
             "比赛结果公布后，相关话题迅速登上体育热榜，成为 2024 年中国体育的重要新闻之一。"
         ),
-        "image": "https://example.com/pan-zhanle.jpg",
+        "image": "/demo-images/sports.svg",
         "author": "综合公开资料整理",
-        "category_id": 4,
+        "category_name": "体育",
         "views": 9100,
         "publish_time": datetime(2024, 7, 31, 5, 30, 0),
     },
@@ -126,9 +128,9 @@ DEMO_NEWS = [
             "不同于传统体育场内开幕式，本届奥运会尝试将城市地标与大型表演结合，"
             "相关视觉设计、运动员入场方式和城市舞台概念在全球社交媒体引发了大量讨论。"
         ),
-        "image": "https://example.com/paris-olympics-opening.jpg",
+        "image": "/demo-images/headline.svg",
         "author": "综合公开资料整理",
-        "category_id": 1,
+        "category_name": "头条",
         "views": 7600,
         "publish_time": datetime(2024, 7, 26, 22, 0, 0),
     },
@@ -141,9 +143,9 @@ DEMO_NEWS = [
             "这一成绩让中国体育代表团在多个项目上都收获了亮眼表现，"
             "也引发了关于竞技体育发展、重点项目突破和年轻运动员成长的广泛关注。"
         ),
-        "image": "https://example.com/china-paris-2024.jpg",
+        "image": "/demo-images/headline.svg",
         "author": "综合公开资料整理",
-        "category_id": 1,
+        "category_name": "头条",
         "views": 8800,
         "publish_time": datetime(2024, 8, 11, 23, 0, 0),
     },
@@ -156,9 +158,9 @@ DEMO_NEWS = [
             "从滑雪场、冰雪大世界到冬季城市漫游，文旅消费和社交平台讨论度同步增长，"
             "成为年初社会民生与消费观察中的热门现象。"
         ),
-        "image": "https://example.com/winter-tourism-2024.jpg",
+        "image": "/demo-images/society.svg",
         "author": "综合公开资料整理",
-        "category_id": 2,
+        "category_name": "社会",
         "views": 6500,
         "publish_time": datetime(2024, 2, 12, 12, 0, 0),
     },
@@ -171,11 +173,41 @@ DEMO_NEWS = [
             "相关产品和基础设施都在快速演进。围绕模型能力、成本、应用场景与监管治理的讨论，"
             "构成了全年科技新闻中的核心主线。"
         ),
-        "image": "https://example.com/ai-2024.jpg",
+        "image": "/demo-images/technology.svg",
         "author": "综合公开资料整理",
-        "category_id": 3,
+        "category_name": "科技",
         "views": 8200,
         "publish_time": datetime(2024, 9, 1, 9, 0, 0),
+    },
+    {
+        "id": 11,
+        "title": "A股新质生产力板块走强带动市场关注科技投资主线",
+        "description": "2024年，多只围绕人工智能、高端制造的新质生产力概念股受到市场关注。",
+        "content": (
+            "2024年，A股市场围绕人工智能算力、高端制造和新型基础设施的投资主线持续升温。"
+            "多家券商研报将新质生产力相关行业列为全年重点观察方向，"
+            "也带动了二级市场对科技成长和产业升级主题的持续讨论。"
+        ),
+        "image": "/demo-images/finance.svg",
+        "author": "综合公开资料整理",
+        "category_name": "财经",
+        "views": 7300,
+        "publish_time": datetime(2024, 5, 18, 10, 30, 0),
+    },
+    {
+        "id": 12,
+        "title": "多家银行下调存款利率引发居民理财配置讨论",
+        "description": "2024年银行存款利率继续调整，居民资产配置与稳健理财再成财经热点。",
+        "content": (
+            "2024年，多家商业银行对部分存款产品利率进行下调，"
+            "引发市场对居民储蓄搬家、低风险理财替代方案和资产配置策略的持续讨论。"
+            "在财经新闻中，这类政策和市场变化持续受到广泛关注。"
+        ),
+        "image": "/demo-images/finance.svg",
+        "author": "综合公开资料整理",
+        "category_name": "财经",
+        "views": 6900,
+        "publish_time": datetime(2024, 7, 12, 9, 0, 0),
     },
 ]
 
@@ -194,19 +226,81 @@ async def wait_for_database() -> None:
 
 
 async def ensure_categories(session) -> None:
-    existing_ids = set((await session.execute(select(Category.id))).scalars().all())
-    categories_to_add = [Category(**item) for item in DEMO_CATEGORIES if item["id"] not in existing_ids]
+    existing_categories = (
+        await session.execute(select(Category).where(Category.name.in_([item["name"] for item in DEMO_CATEGORIES])))
+    ).scalars().all()
+    existing_names = {item.name for item in existing_categories}
+    categories_to_add = [Category(**item) for item in DEMO_CATEGORIES if item["name"] not in existing_names]
     if categories_to_add:
         session.add_all(categories_to_add)
         await session.commit()
 
 
 async def ensure_news(session) -> None:
-    existing_titles = set((await session.execute(select(News.title))).scalars().all())
-    news_to_add = [News(**item) for item in DEMO_NEWS if item["title"] not in existing_titles]
+    category_map = {
+        category.name: category.id
+        for category in (await session.execute(select(Category))).scalars().all()
+    }
+
+    existing_news = {
+        news.title: news
+        for news in (await session.execute(select(News).where(News.title.in_([item["title"] for item in DEMO_NEWS])))).scalars().all()
+    }
+
+    news_to_add = []
+    for item in DEMO_NEWS:
+        category_id = category_map[item["category_name"]]
+        payload = {
+            "title": item["title"],
+            "description": item["description"],
+            "content": item["content"],
+            "image": item["image"],
+            "author": item["author"],
+            "category_id": category_id,
+            "views": item["views"],
+            "publish_time": item["publish_time"],
+        }
+
+        existing = existing_news.get(item["title"])
+        if existing:
+            existing.description = payload["description"]
+            existing.content = payload["content"]
+            existing.image = payload["image"]
+            existing.author = payload["author"]
+            existing.category_id = payload["category_id"]
+            existing.views = payload["views"]
+            existing.publish_time = payload["publish_time"]
+        else:
+            news_to_add.append(News(**payload))
+
     if news_to_add:
         session.add_all(news_to_add)
+    try:
         await session.commit()
+    except Exception:
+        await session.rollback()
+        existing_titles = set(
+            (await session.execute(select(News.title))).scalars().all()
+        )
+        filtered_news = []
+        for item in DEMO_NEWS:
+            if item["title"] in existing_titles:
+                continue
+            filtered_news.append(
+                News(
+                    title=item["title"],
+                    description=item["description"],
+                    content=item["content"],
+                    image=item["image"],
+                    author=item["author"],
+                    category_id=category_map[item["category_name"]],
+                    views=item["views"],
+                    publish_time=item["publish_time"],
+                )
+            )
+        if filtered_news:
+            session.add_all(filtered_news)
+            await session.commit()
 
 
 async def ensure_demo_user(session) -> User | None:
@@ -246,9 +340,24 @@ async def ensure_demo_relations(session, user: User | None) -> None:
     await session.commit()
 
 
-async def main() -> None:
+async def reset_demo_data(session) -> None:
+    demo_titles = [item["title"] for item in DEMO_NEWS]
+    demo_news_ids = (
+        await session.execute(select(News.id).where(News.title.in_(demo_titles)))
+    ).scalars().all()
+
+    if demo_news_ids:
+        await session.execute(delete(Favorite).where(Favorite.news_id.in_(demo_news_ids)))
+        await session.execute(delete(History).where(History.news_id.in_(demo_news_ids)))
+        await session.execute(delete(News).where(News.id.in_(demo_news_ids)))
+    await session.commit()
+
+
+async def main(reset: bool = False) -> None:
     await wait_for_database()
     async with AsyncSessionLocal() as session:
+        if reset:
+            await reset_demo_data(session)
         await ensure_categories(session)
         await ensure_news(session)
         user = await ensure_demo_user(session)
@@ -257,4 +366,11 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    parser = argparse.ArgumentParser(description="Seed repeatable demo data for FastAPI AI News Platform")
+    parser.add_argument(
+        "--reset",
+        action="store_true",
+        help="Delete known demo categories/news and rebuild them from scratch before seeding",
+    )
+    args = parser.parse_args()
+    asyncio.run(main(reset=args.reset))

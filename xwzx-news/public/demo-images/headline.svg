@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 480">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#e6f0ff" />
+      <stop offset="100%" stop-color="#fdfefe" />
+    </linearGradient>
+  </defs>
+  <rect width="800" height="480" fill="url(#bg)" />
+  <rect x="48" y="52" width="704" height="376" rx="24" fill="#ffffff" opacity="0.88" />
+  <rect x="88" y="98" width="220" height="26" rx="13" fill="#3a86ff" opacity="0.2" />
+  <rect x="88" y="146" width="624" height="22" rx="11" fill="#89b4ff" opacity="0.35" />
+  <rect x="88" y="188" width="510" height="22" rx="11" fill="#89b4ff" opacity="0.25" />
+  <rect x="88" y="246" width="624" height="112" rx="20" fill="#dceaff" />
+  <path d="M132 316 L248 274 L334 326 L444 232 L560 308 L672 258" stroke="#3a86ff" stroke-width="16" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+  <text x="88" y="390" font-size="28" font-family="Arial, Helvetica, sans-serif" fill="#355070">头条演示配图</text>
+</svg>

@@ -82,6 +82,9 @@ export const useFavoriteStore = defineStore('favorite', {
         }
       } catch (error) {
         console.error('添加收藏请求失败:', error)
+        if (error?.response?.status === 401) {
+          useUserStore().logout()
+        }
         return { success: false, message: getErrorMessage(error) }
       } finally {
         this.loading = false
@@ -110,6 +113,9 @@ export const useFavoriteStore = defineStore('favorite', {
         }
       } catch (error) {
         console.error('取消收藏请求失败:', error)
+        if (error?.response?.status === 401) {
+          useUserStore().logout()
+        }
         return { success: false, message: getErrorMessage(error) }
       } finally {
         this.loading = false
@@ -117,13 +123,28 @@ export const useFavoriteStore = defineStore('favorite', {
     },
 
     addFavorite(news) {
-      if (!this.isFavorite(news.id)) {
-        this.favorites.unshift({
-          ...news,
-          favoriteTime: new Date().toLocaleString(),
-        })
-        this.saveFavorites()
+      if (!news || !news.id) {
+        return
       }
+
+      const normalizedNews = {
+        ...news,
+        favoriteTime: news.favoriteTime || new Date().toLocaleString(),
+      }
+
+      const existingIndex = this.favorites.findIndex((item) => item.id === news.id)
+      if (existingIndex !== -1) {
+        this.favorites.splice(existingIndex, 1, {
+          ...this.favorites[existingIndex],
+          ...normalizedNews,
+        })
+      } else {
+        this.favorites.unshift({
+          ...normalizedNews,
+        })
+      }
+
+      this.saveFavorites()
     },
 
     removeFavorite(id) {
@@ -141,17 +162,19 @@ export const useFavoriteStore = defineStore('favorite', {
         const result = await this.removeFavoriteApi(news.id)
         if (result.success) {
           this.removeFavorite(news.id)
-          return false
+          return { success: true, isFavorite: false }
         }
-        return null
+        console.error('取消收藏失败:', result.message)
+        return { success: false, message: result.message }
       }
 
       const result = await this.addFavoriteApi(news.id)
       if (result.success) {
         this.addFavorite(news)
-        return true
+        return { success: true, isFavorite: true }
       }
-      return null
+      console.error('添加收藏失败:', result.message)
+      return { success: false, message: result.message }
     },
 
     clearFavorites() {
@@ -184,6 +207,9 @@ export const useFavoriteStore = defineStore('favorite', {
         }
       } catch (error) {
         console.error('清空收藏请求失败:', error)
+        if (error?.response?.status === 401) {
+          useUserStore().logout()
+        }
         return { success: false, message: getErrorMessage(error) }
       } finally {
         this.loading = false
@@ -222,7 +248,8 @@ export const useFavoriteStore = defineStore('favorite', {
         })
 
         if (response.data?.code === 200) {
-          this.favorites = response.data.data.list
+          this.favorites = response.data.data.list || []
+          this.saveFavorites()
           return { success: true, data: response.data.data }
         }
 
@@ -232,6 +259,9 @@ export const useFavoriteStore = defineStore('favorite', {
         }
       } catch (error) {
         console.error('获取收藏列表请求失败:', error)
+        if (error?.response?.status === 401) {
+          useUserStore().logout()
+        }
         return { success: false, message: getErrorMessage(error) }
       } finally {
         this.loading = false

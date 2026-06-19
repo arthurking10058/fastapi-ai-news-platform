@@ -1,3 +1,4 @@
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -11,17 +12,21 @@ from toutiao_backend.utils.exception_handlers import register_exception_handlers
 
 settings = get_settings()
 setup_logging(settings.debug)
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
+    logger.info("Starting application and ensuring database tables exist")
     await create_tables()
+    logger.info("Application startup complete")
     yield
+    logger.info("Application shutdown complete")
 
 
 app = FastAPI(
-    title="AI 掘金头条后端",
-    description="AI 掘金头条项目后端服务",
+    title="FastAPI AI News Platform",
+    description="A FastAPI backend for the AI news demo platform.",
     version="0.1.0",
     lifespan=lifespan,
 )
@@ -39,7 +44,7 @@ app.add_middleware(
 
 @app.get("/")
 async def root() -> dict[str, str]:
-    return {"message": "AI 掘金头条后端已启动"}
+    return {"message": "FastAPI AI News Platform backend is running."}
 
 
 app.include_router(users.router)

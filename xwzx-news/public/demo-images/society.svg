@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 480">
+  <rect width="800" height="480" fill="#f1fbf3" />
+  <rect x="48" y="52" width="704" height="376" rx="24" fill="#ffffff" />
+  <circle cx="200" cy="188" r="42" fill="#90be6d" opacity="0.28" />
+  <circle cx="318" cy="188" r="42" fill="#90be6d" opacity="0.28" />
+  <circle cx="436" cy="188" r="42" fill="#90be6d" opacity="0.28" />
+  <circle cx="554" cy="188" r="42" fill="#90be6d" opacity="0.28" />
+  <rect x="154" y="248" width="446" height="72" rx="20" fill="#dff2e2" />
+  <path d="M154 248 L200 208 M272 248 L318 208 M390 248 L436 208 M508 248 L554 208" stroke="#6a994e" stroke-width="14" />
+  <text x="120" y="390" font-size="28" font-family="Arial, Helvetica, sans-serif" fill="#355070">社会演示配图</text>
+</svg>

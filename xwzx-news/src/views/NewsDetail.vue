@@ -25,8 +25,14 @@
         <span>{{ newsStore.newsDetail.views }} 阅读</span>
       </div>
 
-      <div class="cover" v-if="newsStore.newsDetail.image">
-        <img :src="newsStore.newsDetail.image" :alt="newsStore.newsDetail.title">
+      <div class="cover">
+        <img
+          :src="normalizeImageUrl(newsStore.newsDetail.image, newsStore.newsDetail.categoryId)"
+          :alt="newsStore.newsDetail.title"
+          :data-category-id="newsStore.newsDetail.categoryId"
+          loading="lazy"
+          @error="applyImageFallback"
+        >
       </div>
 
       <div class="content">
@@ -44,8 +50,14 @@
             :key="item.id"
             @click="goToRelatedNews(item.id)"
           >
-            <div class="related-image" v-if="item.image">
-              <img :src="item.image" :alt="item.title">
+            <div class="related-image">
+              <img
+                :src="normalizeImageUrl(item.image, newsStore.newsDetail.categoryId)"
+                :alt="item.title"
+                :data-category-id="newsStore.newsDetail.categoryId"
+                loading="lazy"
+                @error="applyImageFallback"
+              >
             </div>
             <div class="related-title">{{ item.title }}</div>
           </div>
@@ -58,7 +70,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { showToast } from 'vant'
 import { useNewsStore } from '../store/modules/news'
@@ -66,6 +78,8 @@ import { useHistoryStore } from '../store/modules/history'
 import { useFavoriteStore } from '../store/modules/favorite'
 import { useUserStore } from '../store/user'
 import { formatTime } from '../utils/formatTime'
+import { applyImageFallback, normalizeImageUrl } from '../utils/imageFallback'
+import { normalizeMessage } from '../utils/message'
 
 const route = useRoute()
 const router = useRouter()
@@ -73,6 +87,7 @@ const newsStore = useNewsStore()
 const historyStore = useHistoryStore()
 const favoriteStore = useFavoriteStore()
 const userStore = useUserStore()
+const detailLoadToken = ref(0)
 
 const newsId = computed(() => Number(route.params.id))
 
@@ -115,39 +130,48 @@ const toggleFavorite = async () => {
 
   const status = await favoriteStore.toggleFavorite(newsStore.newsDetail)
 
-  if (status === true) {
+  if (status?.success && status.isFavorite === true) {
     showToast({
       message: '已添加到收藏',
       position: 'bottom'
     })
-  } else if (status === false) {
+  } else if (status?.success && status.isFavorite === false) {
     showToast({
       message: '已取消收藏',
       position: 'bottom'
     })
   } else {
     showToast({
-      message: '操作失败，请稍后重试',
+      message: normalizeMessage(status?.message),
       position: 'bottom'
     })
   }
 }
 
 const loadDetail = async () => {
-  await newsStore.getNewsDetail(newsId.value)
-  await recordHistory()
+  const currentToken = ++detailLoadToken.value
+  const detail = await newsStore.getNewsDetail(newsId.value)
+
+  if (currentToken !== detailLoadToken.value || !detail?.id) {
+    return
+  }
 
   favoriteStore.loadFavorites()
+  recordHistory()
 
-  if (userStore.getLoginStatus && newsStore.newsDetail.id) {
-    const result = await favoriteStore.checkFavoriteStatusApi(newsStore.newsDetail.id)
-    if (result.success && !result.isLocal) {
-      if (result.isFavorite && !favoriteStore.isFavorite(newsStore.newsDetail.id)) {
-        favoriteStore.addFavorite(newsStore.newsDetail)
-      } else if (!result.isFavorite && favoriteStore.isFavorite(newsStore.newsDetail.id)) {
-        favoriteStore.removeFavorite(newsStore.newsDetail.id)
-      }
-    }
+  if (!userStore.getLoginStatus) {
+    return
+  }
+
+  const result = await favoriteStore.checkFavoriteStatusApi(detail.id)
+  if (currentToken !== detailLoadToken.value || !result.success || result.isLocal) {
+    return
+  }
+
+  if (result.isFavorite && !favoriteStore.isFavorite(detail.id)) {
+    favoriteStore.addFavorite(detail)
+  } else if (!result.isFavorite && favoriteStore.isFavorite(detail.id)) {
+    favoriteStore.removeFavorite(detail.id)
   }
 }
 

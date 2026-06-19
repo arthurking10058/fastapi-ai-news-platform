@@ -16,7 +16,18 @@
           :title="getCategoryTranslation(category.name)"
         >
           <van-pull-refresh v-model="newsStore.refreshing" @refresh="onRefresh">
+            <div v-if="newsStore.initialLoading" class="skeleton-list">
+              <div v-for="index in 4" :key="index" class="skeleton-item">
+                <div class="skeleton skeleton-image"></div>
+                <div class="skeleton-content">
+                  <div class="skeleton skeleton-title"></div>
+                  <div class="skeleton skeleton-desc"></div>
+                  <div class="skeleton skeleton-meta"></div>
+                </div>
+              </div>
+            </div>
             <van-list
+              v-else
               v-model:loading="newsStore.loading"
               :finished="newsStore.finished"
               :finished-text="$t('home.noMore')"
@@ -117,8 +128,28 @@ watch(activeTab, (newVal) => {
 })
 
 onMounted(async () => {
-  await newsStore.getNewsList()
-  newsStore.getCategories()
+  await newsStore.getCategories()
+
+  const routeCategoryId = Number.parseInt(route.query.categoryId, 10)
+  if (route.query.categoryId && Number.isInteger(routeCategoryId)) {
+    const matchedCategory = displayCategories.value.find(category => category.id === routeCategoryId)
+    if (matchedCategory) {
+      activeTab.value = displayCategories.value.findIndex(category => category.id === routeCategoryId)
+      newsStore.currentCategory = routeCategoryId
+    }
+  } else if (displayCategories.value.length > 0) {
+    newsStore.currentCategory = displayCategories.value[0].id
+  }
+
+  await newsStore.getNewsList(true)
+
+  const prefetchCategories = displayCategories.value
+    .filter(category => category.id !== newsStore.currentCategory)
+    .slice(0, 2)
+
+  prefetchCategories.forEach((category) => {
+    newsStore.prefetchFirstPage(category.id)
+  })
 
   setTimeout(updateTabsPosition, 300)
   window.addEventListener('scroll', handleScroll)
@@ -211,5 +242,48 @@ const onLoad = () => {
 
 .dropdown-item:hover {
   background-color: #f5f5f5;
+}
+
+.skeleton-list {
+  padding: 8px 0;
+}
+
+.skeleton-item {
+  display: flex;
+  gap: 12px;
+  padding: 12px 16px;
+  background-color: #fff;
+  border-bottom: 1px solid #f2f2f2;
+}
+
+.skeleton-image {
+  width: 110px;
+  height: 80px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.skeleton-content {
+  flex: 1;
+}
+
+.skeleton-title {
+  height: 18px;
+  width: 85%;
+  border-radius: 6px;
+  margin-bottom: 12px;
+}
+
+.skeleton-desc {
+  height: 14px;
+  width: 100%;
+  border-radius: 6px;
+  margin-bottom: 12px;
+}
+
+.skeleton-meta {
+  height: 12px;
+  width: 60%;
+  border-radius: 6px;
 }
 </style>
